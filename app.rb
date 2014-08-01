@@ -1,6 +1,14 @@
 require 'sinatra'
+require 'set'
+
+module Boogle
+  def string_to_set(string)
+    Set.new(string.gsub(/[^a-zA-Z\s]/, '').split(/\s+/).map(&:downcase))
+  end
+end
 
 class Page
+  include Boogle
   extend Enumerable
 
   def self.each(&block)
@@ -25,9 +33,15 @@ class Page
   def save
     Page.all << self
   end
+
+  def words
+    string_to_set(content)
+    @words ||= string_to_set(content)
+  end
 end
 
 class Boogler
+  include Boogle
   attr_accessor :query, :matches
 
   def initialize(query)
@@ -37,7 +51,7 @@ class Boogler
   end
 
   def search_terms
-    @search_terms ||= query.gsub(/[^a-zA-Z\s]/, '').split(/\s+/).map(&:downcase).uniq
+    @search_terms ||= string_to_set(query)
   end
 
   def search
@@ -57,7 +71,7 @@ class Boogler
   end
 
   def pages_with_term(term)
-    Page.select { |page| page.content.downcase[term] }
+    Page.select { |page| page.words.include?(term) }
   end
 
   def to_json
