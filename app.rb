@@ -67,6 +67,7 @@ class Boogler
     @query = query
     @matches = []
     search
+    sort
   end
 
   def search_terms
@@ -91,6 +92,10 @@ class Boogler
 
   def pages_with_term(term)
     Page.select { |page| page.words.include?(term) }
+  end
+
+  def sort
+    matches.sort! { |a, b| b['score'] <=> a['score'] }
   end
 
   def to_json
