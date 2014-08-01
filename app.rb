@@ -2,6 +2,24 @@ require 'sinatra'
 require 'set'
 
 module Boogle
+  def self.cache
+    @cache ||= Hash.new([])
+  end
+
+  def self.cache_page(page)
+    page.words.each do |word|
+      cache_word_for_page(word, page)
+    end
+  end
+
+  def self.cache_word_for_page(word, page)
+    if found_word = cache.fetch(word, nil)
+      found_word << page.page_id
+    else
+      cache[word] = Set.new([page.page_id])
+    end
+  end
+
   def string_to_set(string)
     Set.new(string.gsub(/[^a-zA-Z\s]/, '').split(/\s+/).map(&:downcase))
   end
@@ -32,6 +50,7 @@ class Page
 
   def save
     Page.all << self
+    Boogle.cache_page(self)
   end
 
   def words
@@ -56,7 +75,7 @@ class Boogler
 
   def search
     search_terms.each do |term|
-      pages_with_term(term).map(&:page_id).each do |pid|
+      Boogle.cache[term].each do |pid|
         increment_score_for_page(pid)
       end
     end
