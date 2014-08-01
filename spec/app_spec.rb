@@ -44,8 +44,8 @@ describe "boogle" do
   describe "/search" do
     describe "get" do
       before :all do
-        Page.build('pageId' => 300, 'content' => 'Elementary, dear Watson')
-        Page.build('pageId' => 12, 'content' => 'Dear')
+        Page.create('pageId' => 300, 'content' => 'Elementary, dear Watson')
+        Page.create('pageId' => 12, 'content' => 'Dear')
       end
 
       it "returns the results for the search" do

@@ -33,7 +33,7 @@ class Page
     all.each(&block)
   end
 
-  def self.build(opts)
+  def self.create(opts)
     new(opts).save
   end
 
