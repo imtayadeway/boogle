@@ -1,7 +1,13 @@
 require 'sinatra'
 require 'set'
 
-module Boogle
+module BoogleHelpers
+  def string_to_word_set(string)
+    Set.new(string.gsub(/[^a-zA-Z\s]/, '').split(/\s+/).map(&:downcase))
+  end
+end
+
+module BoogleCache
   def self.cache
     @cache ||= Hash.new([])
   end
@@ -19,14 +25,10 @@ module Boogle
       cache[word] = Set.new([page.page_id])
     end
   end
-
-  def string_to_set(string)
-    Set.new(string.gsub(/[^a-zA-Z\s]/, '').split(/\s+/).map(&:downcase))
-  end
 end
 
 class Page
-  include Boogle
+  include BoogleHelpers
   extend Enumerable
 
   def self.each(&block)
@@ -50,17 +52,16 @@ class Page
 
   def save
     Page.all << self
-    Boogle.cache_page(self)
+    BoogleCache.cache_page(self)
   end
 
   def words
-    string_to_set(content)
-    @words ||= string_to_set(content)
+    @words ||= string_to_word_set(content)
   end
 end
 
-class Boogler
-  include Boogle
+class BoogleSearch
+  include BoogleHelpers
   attr_accessor :query, :matches
 
   def initialize(query)
@@ -70,13 +71,19 @@ class Boogler
     sort
   end
 
+  def to_json
+    {'matches' => matches}.to_json
+  end
+
+  private
+
   def search_terms
-    @search_terms ||= string_to_set(query)
+    @search_terms ||= string_to_word_set(query)
   end
 
   def search
     search_terms.each do |term|
-      Boogle.cache[term].each do |pid|
+      BoogleCache.cache[term].each do |pid|
         increment_score_for_page(pid)
       end
     end
@@ -97,15 +104,11 @@ class Boogler
   def sort
     matches.sort! { |a, b| b['score'] <=> a['score'] }
   end
-
-  def to_json
-    {'matches' => matches}.to_json
-  end
 end
 
 get '/search' do
   content_type :json
-  Boogler.new(params['query']).to_json
+  BoogleSearch.new(params['query']).to_json
 end
 
 post '/index' do
